@@ -1,5 +1,5 @@
 # TODO: Change the name of the org 
-org: sudkul
+org: kvkv1997
 app: serverless-todo-app
 service: serverless-todo-app
 
@@ -57,6 +57,13 @@ functions:
           path: todos
           cors: true
           authorizer: Auth
+  # My Work
+    iamRoleStatementsInherit: true
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb: Query
+        Resource: 
 
   # TODO: Configure this function - 
   # Provide iamRoleStatements property. Decide the Actions and AWS Resource. 
@@ -73,6 +80,14 @@ functions:
           request:
             schemas:
               application/json: ${file(models/create-todo-model.json)}
+  # My Work
+    iamRoleStatementsInherit: true
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb : PutItem
+        Resource: !GetAtt TodosTable.Arn
+
 
   # TODO: Configure this function
   # Provide property for setting up CORS, Authorizer, iamRoleStatements, and request schemas
@@ -82,6 +97,18 @@ functions:
       - http:
           method: patch
           path: todos/{todoId}
+  # My Work
+          cors: true
+          authorizer: Auth
+          request:
+            schemas:
+              application/json: ${file(models/create-todo-model.json)}
+      iamRoleStatementsInherit: true
+      iamRoleStatements:
+        - Effect: Allow
+          Action:
+            - dynamodb : UpdateItem
+        
 
   # TODO: Configure this function
   # Provide property for setting up CORS, Authorizer, iamRoleStatements
@@ -91,6 +118,13 @@ functions:
       - http:
           method: delete
           path: todos/{todoId}
+  # My Work
+    iamRoleStatementsInherit: true
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb : DeleteItem
+        Resource: !GetAtt TodosTable.Arn
 
   # TODO: Configure this function
   # Provide property for setting up CORS, Authorizer, iamRoleStatements
@@ -100,6 +134,22 @@ functions:
       - http:
           method: post
           path: todos/{todoId}/attachment
+  # My Work
+          cors: true
+          Authorizer: Auth
+    iamRoleStatementsInherit: true
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - s3:PutObject
+          - s3:DeleteObject
+          - s3:GetObject
+        Resource: !GetAtt AttachmentsBucket.Arn
+        - Effect: Allow:
+          Action:
+            - dynamodb : UpdateItem
+          Resource: !GetAtt TodosTable.Arn
+
 
 resources:
   Resources:
@@ -109,20 +159,85 @@ resources:
     GatewayResponseDefault4XX:
       Type: AWS::ApiGateway::GatewayResponse
       Properties:
-    
+  # My Work
+      ResponseParameters:
+        gatewayresponse.hander.Access-Control-Allow-Origin: "'*'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+      ResponseType: DEFAULT_4XX
+      RestApiId:
+        Ref: ApiGatewayRestApi  
+
+        
     # TODO: Create a DynamoDB table with local secondary index and a composite key
+    #My Work
     TodosTable:
       Type: AWS::DynamoDB::Table
       Properties:
+#My Work 
+      AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: todoId
+            AttributeType: S
+          - AttributeName: createdAt
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: todoId
+            KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+      TableName: ${self:provider.environment.TODOS_TABLE}
+      LocalSecondaryIndexes:
+          - IndexName: ${self:provider.environment.TODOS_CREATED_AT_INDEX}
+          KeySchema:
+           - AttributeName: userId
+            KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL # What attributes will be copied to an index
 
     # TODO: Complete the bucket properties below. 
     # Do not forget to add the CorsConfiguration propoerty
     AttachmentsBucket:
       Type: AWS::S3::Bucket
       Properties:
+# My Work
+        BucketName: ${self:provider.environment.ATTACHMENT_S3_BUCKET}
+        CorsConfiguration:
+          CorsRules:
+            - 
+              AllowedOrigins:
+                - '*'
+            - 
+              AllowedHeaders:
+                - '*'
+            -
+              AllowedMethods:
+                - GET
+                - POST
+                - DELETE
+                - PUT
+                - HEAD
+                - OPTIONS
+              MaxAge: 3000
+
 
     # TODO: Complete the policy below and attach it to the bucket defined above
     # For cross referencing the name of the bucket, use "!Ref AttachmentsBucket"
     BucketPolicy:
       Type: AWS::S3::BucketPolicy
       Properties:
+#My work      
+        PolicyDocument:
+          Id: MyPolicy
+          Version: "2012-10-17"
+          Statement:
+            - Sid: PublicReadForGetBucketObjects
+              Effect: Allow
+              Principal: '*'
+              Action: '*'
+              Resource: 'arn:aws:s3:::${self:provider.environment.ATTACHMENT_S3_BUCKET}/*'
+        Bucket: !Ref AttachmentsBucket

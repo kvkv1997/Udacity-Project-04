@@ -12,6 +12,8 @@
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
+    "types": ["node"],
+    "typeRoots" : ["./node_modules","./node_modules/@types"],
     "module": "esnext",
     "moduleResolution": "node",
     "resolveJsonModule": true,
