@@ -1,36 +1,40 @@
 import * as AWS from 'aws-sdk'
-import * as AWSXRay from 'aws-xray-sdk'
-import { DocumentClient } from 'aws-sdk/clients/dynamodb'
 import { createLogger } from '../utils/logger'
+import { DocumentClient } from 'aws-sdk/clients/dynamodb'
 
-const XAWS = AWSXRay.captureAWS(AWS)
 
+const AWSXRay = require('aws-xray-sdk');
 const logger = createLogger('Attach file storage')
+const XAWS = AWSXRay.captureAWS(AWS)
 
 // TODO: Implement the fileStogare logic
 export class AttachmentUtils {
-
   constructor(
     private readonly docClient: DocumentClient = createDynamoDBClient(),
     private readonly todosTable = process.env.TODOS_TABLE
-  ) {
-  }
+  ) {}
 
-  async updateAttachmentUrl(todoId: string, userId: string, url: string): Promise<string> {
+  async updateAttachmentUrl(
+    todoId: string,
+    userId: string,
+    url: string
+  ): Promise<string> {
     logger.info('Update attachment url of todo')
 
-    await this.docClient.update({
-      TableName: this.todosTable,
-      Key: {
-        todoId: todoId,
-        userId: userId
-      },
-      UpdateExpression: "set attachmentUrl = :url",
-      ExpressionAttributeValues: {
-        ":url": url,
-      }
-    }).promise()
-  
+    await this.docClient
+      .update({
+        TableName: this.todosTable,
+        Key: {
+          todoId: todoId,
+          userId: userId
+        },
+        UpdateExpression: 'set attachmentUrl = :url',
+        ExpressionAttributeValues: {
+          ':url': url
+        }
+      })
+      .promise()
+
     return url
   }
 }
